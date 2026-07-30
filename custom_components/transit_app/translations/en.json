@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to Transit App",
-        "description": "Enter your Transit App API key (see https://transitapp.com/apis) and the location to search for nearby stops.",
+        "description": "Enter your Transit App API key and the location to search for nearby stops.",
         "data": {
           "api_key": "API key",
           "latitude": "Latitude",

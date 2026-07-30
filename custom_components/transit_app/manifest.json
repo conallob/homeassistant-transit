@@ -4,8 +4,8 @@
   "codeowners": ["@conallob"],
   "config_flow": true,
   "documentation": "https://github.com/conallob/homeassistant-transit",
-  "issue_tracker": "https://github.com/conallob/homeassistant-transit/issues",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/conallob/homeassistant-transit/issues",
   "requirements": [],
   "version": "0.1.0"
 }

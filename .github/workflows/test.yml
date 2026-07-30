@@ -52,3 +52,10 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
+          # "brands" requires a merged home-assistant/brands submission and
+          # "topics" requires GitHub repository topics to be set - both are
+          # repo-admin/submission steps for HACS *default store* listing,
+          # not something a code change here can satisfy, and this repo
+          # isn't in the default store (README documents installing it as a
+          # HACS custom repository instead).
+          ignore: "brands,topics"
