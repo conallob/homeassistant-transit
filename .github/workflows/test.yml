@@ -58,4 +58,4 @@ jobs:
           # not something a code change here can satisfy, and this repo
           # isn't in the default store (README documents installing it as a
           # HACS custom repository instead).
-          ignore: "brands,topics"
+          ignore: "brands topics"
