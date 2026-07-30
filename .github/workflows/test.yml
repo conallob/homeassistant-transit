@@ -20,6 +20,19 @@ jobs:
         # dependencies, that's upstream not yet publishing a compatible
         # release for that Python version, not a bug in this repo.
         python-version: ["3.12", "3.14"]
+        include:
+          # Python 3.14 is marked experimental/non-blocking: as of this
+          # writing, pytest-homeassistant-custom-component's Python
+          # 3.14-compatible release pulls in a transitive dependency
+          # (mashumaro, via a newer Home Assistant) that uses
+          # `typing.ByteString`, which Python 3.14 removed - so the test
+          # harness itself fails to import, unconditionally, before any of
+          # this repo's tests even run. That's an upstream incompatibility,
+          # not something fixable here. Once it's resolved upstream, drop
+          # this `experimental` flag so the 3.14 leg becomes blocking too.
+          - python-version: "3.14"
+            experimental: true
+    continue-on-error: ${{ matrix.experimental == true }}
     steps:
       - uses: actions/checkout@v4
 

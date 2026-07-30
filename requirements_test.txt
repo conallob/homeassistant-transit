@@ -12,4 +12,3 @@
 # whichever Python versions that release doesn't support. Let pip pick the
 # newest release compatible with the interpreter actually running.
 pytest-homeassistant-custom-component
-aioresponses==0.7.9
