@@ -42,11 +42,26 @@ directory and restart Home Assistant.
 2. In Home Assistant: **Settings -> Devices & Services -> Add Integration -> Transit App**.
 3. Enter your API key and confirm (or override) the search location and radius.
 4. Select the stops you want to track from the list of nearby stops.
+5. Optionally set up the API-call-saving filters described below (skippable - all off by default).
 
 Sensors are created automatically for every route and direction Transit App reports departures
 for at each selected stop, and new ones appear as new routes/directions show up (e.g. a route that
-only runs certain times of day). To change which stops are tracked later, use the integration's
-**Configure** option, which repeats the location search and stop-selection steps.
+only runs certain times of day). Use the integration's **Configure** option any time afterwards to:
+
+- **Add or change tracked stops** - search again from a new location/radius. Stops you already
+  track stay selected even if a new search doesn't turn them up again, so a single config entry
+  (and its single Transit App API key) can accumulate stops from multiple areas - e.g. home and
+  work - and poll all of them together in as few batched `stop_departures` requests as possible,
+  instead of needing a separate integration entry (and separate polling) per area.
+- **Save API calls** - three independent, optional filters to help stay within your key's call
+  quota:
+  - *Presence filter*: only poll while at least one of the chosen `person`/`device_tracker`
+    entities is `home`.
+  - *Quiet hours*: a daily time window (e.g. overnight) during which polling is skipped.
+  - *Quiet days*: whole weekdays (e.g. Saturday/Sunday) during which polling is skipped entirely.
+
+  When a poll is skipped for any of these reasons, sensors simply keep their last known data
+  rather than making a request.
 
 ## Development background
 
