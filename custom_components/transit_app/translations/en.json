@@ -1,0 +1,85 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Transit App",
+        "description": "Enter your Transit App API key and the location to search for nearby stops.",
+        "data": {
+          "api_key": "API key",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius": "Search radius (metres)"
+        }
+      },
+      "stops": {
+        "title": "Choose stops to track",
+        "description": "Select the stops you want next-departure sensors for.",
+        "data": {
+          "stops": "Stops"
+        }
+      },
+      "filters": {
+        "title": "Save API calls (optional)",
+        "description": "These are optional and all off by default. Use them to skip polling Transit App when nobody needs the data, to help stay within your API key's call quota.",
+        "data": {
+          "presence_entities": "Only poll while one of these is home",
+          "quiet_hours_start": "Quiet hours start",
+          "quiet_hours_end": "Quiet hours end",
+          "quiet_days": "Quiet days (no polling at all)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected by Transit App.",
+      "cannot_connect": "Could not reach the Transit App API.",
+      "no_stops_found": "No stops were found near that location. Try a larger radius.",
+      "no_stops_selected": "Select at least one stop."
+    },
+    "abort": {
+      "already_configured": "This combination of API key and stops is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Transit App options",
+        "menu_options": {
+          "search_stops": "Add or change tracked stops",
+          "filters": "Save API calls (presence / quiet hours)"
+        }
+      },
+      "search_stops": {
+        "title": "Search for stops",
+        "description": "Search again to add stops. Stops you already track stay selected even if this search doesn't find them again.",
+        "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius": "Search radius (metres)"
+        }
+      },
+      "stops": {
+        "title": "Choose stops to track",
+        "description": "Select the stops you want next-departure sensors for.",
+        "data": {
+          "stops": "Stops"
+        }
+      },
+      "filters": {
+        "title": "Save API calls (optional)",
+        "description": "These are optional and all off by default. Use them to skip polling Transit App when nobody needs the data, to help stay within your API key's call quota.",
+        "data": {
+          "presence_entities": "Only poll while one of these is home",
+          "quiet_hours_start": "Quiet hours start",
+          "quiet_hours_end": "Quiet hours end",
+          "quiet_days": "Quiet days (no polling at all)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected by Transit App.",
+      "cannot_connect": "Could not reach the Transit App API.",
+      "no_stops_found": "No stops were found near that location. Try a larger radius.",
+      "no_stops_selected": "Select at least one stop."
+    }
+  }
+}
