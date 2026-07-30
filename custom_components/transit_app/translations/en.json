@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Transit App",
+        "description": "Enter your Transit App API key (see https://transitapp.com/apis) and the location to search for nearby stops.",
+        "data": {
+          "api_key": "API key",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius": "Search radius (metres)"
+        }
+      },
+      "stops": {
+        "title": "Choose stops to track",
+        "description": "Select the stops you want next-departure sensors for.",
+        "data": {
+          "stops": "Stops"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected by Transit App.",
+      "cannot_connect": "Could not reach the Transit App API.",
+      "no_stops_found": "No stops were found near that location. Try a larger radius.",
+      "no_stops_selected": "Select at least one stop."
+    },
+    "abort": {
+      "already_configured": "This combination of API key and stops is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Search for stops",
+        "description": "Search again to add or replace tracked stops.",
+        "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius": "Search radius (metres)"
+        }
+      },
+      "stops": {
+        "title": "Choose stops to track",
+        "description": "Select the stops you want next-departure sensors for.",
+        "data": {
+          "stops": "Stops"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected by Transit App.",
+      "cannot_connect": "Could not reach the Transit App API.",
+      "no_stops_found": "No stops were found near that location. Try a larger radius.",
+      "no_stops_selected": "Select at least one stop."
+    }
+  }
+}
