@@ -69,3 +69,23 @@ See [`rest/transit_app_next_bus.yaml`](https://github.com/conallob/Home-Assistan
 in `conallob/Home-Assistant-Config` for the original REST-sensor proof of concept this
 integration replaces, and the [Transit App API docs](https://api-doc.transitapp.com/v3.html) for
 endpoint details.
+
+## Testing
+
+Unit tests use [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component),
+the standard test harness for Home Assistant custom integrations. They require Python 3.12+
+(matching the `homeassistant` core version this pins):
+
+```console
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements_test.txt
+pytest tests --cov=custom_components.transit_app
+```
+
+`.github/workflows/test.yml` runs this same suite on every push/PR, alongside the two checks
+every published HA custom integration is expected to pass:
+[`hassfest`](https://developers.home-assistant.io/docs/creating_integration_manifest/#hassfest)
+(validates `manifest.json`/`strings.json`/translations structure) and
+[HACS repository validation](https://hacs.xyz/docs/publish/action/) (validates `hacs.json` and
+repository layout for HACS distribution).

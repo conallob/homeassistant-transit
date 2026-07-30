@@ -1,0 +1,7 @@
+# Test-only dependencies for custom_components/transit_app.
+# pytest-homeassistant-custom-component pulls in a matching pinned
+# `homeassistant` core version (and its own pytest/pytest-asyncio/etc. test
+# stack) as a transitive dependency - do not add a separate `homeassistant`
+# pin here, it would fight this one for the resolved version.
+pytest-homeassistant-custom-component==0.13.205
+aioresponses==0.7.9

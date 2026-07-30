@@ -56,6 +56,19 @@ def _stop_label(stop: dict[str, Any]) -> str:
     return " ".join(str(p) for p in parts)
 
 
+def _time_field(key: str, current: dict[str, Any]) -> vol.Marker:
+    """An optional time field that only gets a default when one is already set.
+
+    A TimeSelector rejects "" as an invalid time, so - unlike the list-typed
+    fields below, where an empty list is a perfectly valid "default" - this
+    field must be left without a default entirely when unset, so voluptuous
+    doesn't try to validate an empty placeholder against the time selector.
+    """
+    if current.get(key):
+        return vol.Optional(key, default=current[key])
+    return vol.Optional(key)
+
+
 def _filters_schema(current: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
@@ -69,12 +82,8 @@ def _filters_schema(current: dict[str, Any]) -> vol.Schema:
                     }
                 }
             ),
-            vol.Optional(
-                CONF_QUIET_HOURS_START, default=current.get(CONF_QUIET_HOURS_START, "")
-            ): selector.selector({"time": {}}),
-            vol.Optional(
-                CONF_QUIET_HOURS_END, default=current.get(CONF_QUIET_HOURS_END, "")
-            ): selector.selector({"time": {}}),
+            _time_field(CONF_QUIET_HOURS_START, current): selector.selector({"time": {}}),
+            _time_field(CONF_QUIET_HOURS_END, current): selector.selector({"time": {}}),
             vol.Optional(
                 CONF_QUIET_DAYS, default=current.get(CONF_QUIET_DAYS, [])
             ): selector.selector(
