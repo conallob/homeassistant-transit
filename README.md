@@ -83,9 +83,21 @@ pip install -r requirements_test.txt
 pytest tests --cov=custom_components.transit_app
 ```
 
-`.github/workflows/test.yml` runs this same suite on every push/PR, alongside the two checks
-every published HA custom integration is expected to pass:
+`.github/workflows/test.yml` runs this same suite on every push/PR - against both Python 3.12
+and 3.14, since which Python versions the test harness supports moves as new
+`pytest-homeassistant-custom-component`/`homeassistant` releases land - and uploads coverage to
+[Codecov](https://about.codecov.io/) (requires a `CODECOV_TOKEN` repository secret from
+codecov.io). Alongside that, it runs the two checks every published HA custom integration is
+expected to pass:
 [`hassfest`](https://developers.home-assistant.io/docs/creating_integration_manifest/#hassfest)
 (validates `manifest.json`/`strings.json`/translations structure) and
 [HACS repository validation](https://hacs.xyz/docs/publish/action/) (validates `hacs.json` and
 repository layout for HACS distribution).
+
+## Releasing
+
+Cutting a [GitHub release](https://github.com/conallob/homeassistant-transit/releases) triggers
+`.github/workflows/release.yml`, which bumps `custom_components/transit_app/manifest.json`'s
+`version` field to match the release tag (HACS requires these to match) and moves the release's
+git tag to the commit containing that bump. Just create the release from the UI (or `gh release
+create`) with the tag you want to ship - no manual version bump needed beforehand.
