@@ -3,5 +3,13 @@
 # `homeassistant` core version (and its own pytest/pytest-asyncio/etc. test
 # stack) as a transitive dependency - do not add a separate `homeassistant`
 # pin here, it would fight this one for the resolved version.
-pytest-homeassistant-custom-component==0.13.205
+#
+# Deliberately left unpinned (no ==): the CI test matrix runs multiple
+# Python versions, and each pytest-homeassistant-custom-component release
+# supports only one narrow band of Python versions (it hard-pins an exact
+# `homeassistant` version, which in turn requires a specific Python range).
+# Pinning one version here would make it impossible for pip to resolve on
+# whichever Python versions that release doesn't support. Let pip pick the
+# newest release compatible with the interpreter actually running.
+pytest-homeassistant-custom-component
 aioresponses==0.7.9

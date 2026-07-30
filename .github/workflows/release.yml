@@ -1,0 +1,81 @@
+name: Release
+
+# Runs whenever a GitHub release is published (this is also what creates
+# the underlying git tag, if `tag_name` didn't already exist as a ref).
+# HACS requires custom_components/transit_app/manifest.json's "version" to
+# match the release, so this keeps that in sync automatically: it bumps the
+# manifest, commits that to the branch the release was cut from, and then
+# (re-)creates the release's git tag so it points at the commit that
+# actually contains the matching version - instead of the pre-bump commit
+# GitHub tagged when the release was first published.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+          fetch-depth: 0
+
+      - name: Determine release version
+        id: version
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Update manifest.json version
+        id: update
+        run: |
+          python3 - "$MANIFEST_VERSION" <<'EOF'
+          import json
+          import sys
+
+          version = sys.argv[1]
+          path = "custom_components/transit_app/manifest.json"
+
+          with open(path) as f:
+              manifest = json.load(f)
+
+          if manifest.get("version") == version:
+              print("Manifest version already matches; nothing to do.")
+              sys.exit(0)
+
+          manifest["version"] = version
+          with open(path, "w") as f:
+              json.dump(manifest, f, indent=2)
+              f.write("\n")
+
+          print(f"Updated manifest version to {version}")
+          EOF
+        env:
+          MANIFEST_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Commit and push manifest version bump
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add custom_components/transit_app/manifest.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Bump manifest version to ${{ steps.version.outputs.version }}"
+            git push origin HEAD:"${{ github.event.release.target_commitish }}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Point release tag at the version-bump commit
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          git tag -f "$tag" HEAD
+          git push origin "refs/tags/$tag" --force
