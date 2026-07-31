@@ -1,5 +1,11 @@
 # homeassistant-transit
 
+[![Test](https://github.com/conallob/homeassistant-transit/actions/workflows/test.yml/badge.svg)](https://github.com/conallob/homeassistant-transit/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/conallob/homeassistant-transit/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/homeassistant-transit)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![GitHub release](https://img.shields.io/github/v/release/conallob/homeassistant-transit)](https://github.com/conallob/homeassistant-transit/releases)
+[![License](https://img.shields.io/github/license/conallob/homeassistant-transit)](LICENSE)
+
 A Home Assistant custom integration for the [Transit App](https://transitapp.com) public API
 (`https://external.transitapp.com/v3/public`), providing "next departure" sensors for the
 transit stops you care about.
@@ -27,6 +33,12 @@ replaces that with a proper config flow:
 
 ### HACS (custom repository)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=conallob&repository=homeassistant-transit&category=integration)
+
+If [My Home Assistant](https://www.home-assistant.io/integrations/my/) is enabled on your
+instance, the button above takes you straight to HACS's "Add custom repository" dialog,
+pre-filled. Otherwise, add it manually:
+
 1. HACS -> Integrations -> the `...` menu -> **Custom repositories**.
 2. Add this repository URL with category **Integration**.
 3. Install "Transit App", then restart Home Assistant.
@@ -38,7 +50,7 @@ directory and restart Home Assistant.
 
 ## Configuration
 
-1. Get an API key from [Transit App](https://transitapp.com/apis).
+1. Get an API key from [Transit App](https://transitapp.com/partners/apis).
 2. In Home Assistant: **Settings -> Devices & Services -> Add Integration -> Transit App**.
 3. Enter your API key and confirm (or override) the search location and radius. A wide radius in a
    dense area can turn up a lot of stops - optionally narrow the list with the filter field, which
