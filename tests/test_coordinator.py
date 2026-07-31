@@ -29,7 +29,11 @@ from custom_components.transit_app.const import (
     QUOTA_EXHAUSTED_RECHECK_INTERVAL,
     QUOTA_SAFETY_RESERVE,
 )
-from custom_components.transit_app.coordinator import TransitAppDataUpdateCoordinator
+from custom_components.transit_app.coordinator import (
+    TransitAppDataUpdateCoordinator,
+    _quiet_hours_seconds_per_day,
+    _seconds_until_next_month,
+)
 
 
 async def test_update_data_indexes_by_stop(
@@ -514,3 +518,43 @@ async def test_soft_skip_resets_interval_to_default_for_prompt_rechecks(
     await coordinator._async_update_data()
 
     assert coordinator.update_interval == timedelta(seconds=DEFAULT_SCAN_INTERVAL)
+
+
+def test_seconds_until_next_month_handles_december_rollover() -> None:
+    """December rolls over into January of the *following* year."""
+    seconds = _seconds_until_next_month(datetime(2026, 12, 15, 0, 0, 0))
+    expected = (datetime(2027, 1, 1, 0, 0, 0) - datetime(2026, 12, 15, 0, 0, 0)).total_seconds()
+    assert seconds == expected
+
+
+def test_seconds_until_next_month_non_december() -> None:
+    """A non-December month rolls over within the same year."""
+    seconds = _seconds_until_next_month(datetime(2026, 8, 15, 0, 0, 0))
+    expected = (datetime(2026, 9, 1, 0, 0, 0) - datetime(2026, 8, 15, 0, 0, 0)).total_seconds()
+    assert seconds == expected
+
+
+def test_quiet_hours_seconds_per_day_equal_times_is_zero() -> None:
+    """Identical start/end is treated as no quiet-hours window at all."""
+    assert _quiet_hours_seconds_per_day("09:00:00", "09:00:00") == 0.0
+
+
+def test_quiet_hours_seconds_per_day_same_day_window() -> None:
+    """A same-day (non-overnight) window is just end minus start."""
+    assert _quiet_hours_seconds_per_day("09:00:00", "17:00:00") == 8 * 3600
+
+
+async def test_compute_adaptive_interval_directly_reflects_exhausted_quota(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """_compute_adaptive_interval itself returns the exhausted-quota recheck interval."""
+    hass.config_entries.async_update_entry(
+        config_entry, options={CONF_MONTHLY_QUOTA: QUOTA_SAFETY_RESERVE}
+    )
+    coordinator = TransitAppDataUpdateCoordinator(hass, config_entry)
+    await coordinator._async_load_quota_state()
+
+    now = dt_util.now()
+    assert coordinator._compute_adaptive_interval(now, calls_per_poll=1) == (
+        QUOTA_EXHAUSTED_RECHECK_INTERVAL
+    )
