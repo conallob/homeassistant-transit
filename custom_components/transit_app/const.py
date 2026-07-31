@@ -40,3 +40,6 @@ ATTR_GLOBAL_STOP_ID = "global_stop_id"
 ATTR_STOP_NAME = "stop_name"
 
 MAX_UPCOMING_DEPARTURES = 5
+
+SERVICE_REFRESH = "refresh"
+ATTR_CONFIG_ENTRY_ID = "config_entry_id"

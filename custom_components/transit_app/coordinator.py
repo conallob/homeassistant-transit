@@ -47,12 +47,27 @@ class TransitAppDataUpdateCoordinator(DataUpdateCoordinator[dict[str, list[dict[
         self.client = TransitAppClient(
             async_get_clientsession(hass), entry.data[CONF_API_KEY]
         )
+        self._force_next_update = False
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
+
+    async def async_refresh_now(self) -> None:
+        """Force an immediate poll, bypassing quiet-hours/presence gates.
+
+        Used by the transit_app.refresh action for on-demand debugging -
+        e.g. confirming the API/credentials/stop IDs actually work without
+        waiting for the next scheduled poll or temporarily changing quota
+        filters. Uses async_refresh() rather than async_request_refresh() -
+        the latter is debounced (by design, for coalescing rapid option-
+        change triggers), which would make a manual "do it now" action wait
+        out that debounce window instead of running immediately.
+        """
+        self._force_next_update = True
+        await self.async_refresh()
 
     @property
     def global_stop_ids(self) -> list[str]:
@@ -96,14 +111,19 @@ class TransitAppDataUpdateCoordinator(DataUpdateCoordinator[dict[str, list[dict[
     async def _async_update_data(self) -> dict[str, list[dict[str, Any]]]:
         global_stop_ids = self.global_stop_ids
         if not global_stop_ids:
+            _LOGGER.debug("Transit App: no stops configured on this entry, nothing to poll")
             return {}
 
-        skip_reason = self._skip_reason()
+        force = self._force_next_update
+        self._force_next_update = False
+
+        skip_reason = None if force else self._skip_reason()
         if skip_reason is not None:
             _LOGGER.debug("Skipping Transit App update: %s", skip_reason)
             return self.data or {stop_id: [] for stop_id in global_stop_ids}
 
         by_stop: dict[str, list[dict[str, Any]]] = {stop_id: [] for stop_id in global_stop_ids}
+        unmatched_stop_ids: set[str] = set()
         try:
             for i in range(0, len(global_stop_ids), MAX_GLOBAL_STOP_IDS_PER_REQUEST):
                 chunk = global_stop_ids[i : i + MAX_GLOBAL_STOP_IDS_PER_REQUEST]
@@ -112,9 +132,25 @@ class TransitAppDataUpdateCoordinator(DataUpdateCoordinator[dict[str, list[dict[
                     stop_id = route.get("global_stop_id")
                     if stop_id in by_stop:
                         by_stop[stop_id].append(route)
+                    else:
+                        unmatched_stop_ids.add(stop_id)
         except TransitAppAuthError as err:
             raise UpdateFailed(f"Authentication failed: {err}") from err
         except TransitAppApiError as err:
             raise UpdateFailed(f"Error fetching departures: {err}") from err
+
+        if unmatched_stop_ids:
+            _LOGGER.debug(
+                "Transit App returned route_departures for global_stop_id(s) %s that "
+                "aren't tracked by this entry (tracked: %s) - ignoring them",
+                unmatched_stop_ids,
+                global_stop_ids,
+            )
+        _LOGGER.debug(
+            "Transit App poll complete: queried %d stop(s), got %d route(s) total: %s",
+            len(global_stop_ids),
+            sum(len(routes) for routes in by_stop.values()),
+            {stop_id: len(routes) for stop_id, routes in by_stop.items()},
+        )
 
         return by_stop

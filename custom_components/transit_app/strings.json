@@ -81,5 +81,17 @@
       "no_stops_found": "No stops were found near that location. Try a larger radius.",
       "no_stops_selected": "Select at least one stop."
     }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh departures now",
+      "description": "Immediately polls Transit App for the freshest departures, bypassing any configured quiet hours/days and presence filter. Useful for on-demand debugging without waiting for the next scheduled poll or changing your quota-saving settings.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Transit App integration",
+          "description": "Which Transit App config entry to refresh. Refreshes all of them if omitted."
+        }
+      }
+    }
   }
 }
