@@ -6,6 +6,7 @@ from unittest.mock import patch
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.transit_app.api import TransitAppApiError, TransitAppAuthError
 from custom_components.transit_app.config_flow import _stop_label, _stop_matches_filter
@@ -282,6 +283,38 @@ async def test_search_filter_matching_nothing_shows_specific_error(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "no_stops_match_filter"}
+
+
+async def test_options_flow_search_no_stops_found_shows_error(hass: HomeAssistant) -> None:
+    """An empty search result with nothing previously tracked shows an error.
+
+    Uses a fresh entry with no tracked stops - unlike the `config_entry`
+    fixture, there's nothing for _merge_previously_tracked_stops to fall
+    back to, so an empty nearby_stops response really does leave the
+    choices empty.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Transit App",
+        data={CONF_API_KEY: "test-api-key", CONF_STOPS: []},
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "search_stops"}
+    )
+
+    with patch(_PATCH_NEARBY_STOPS, return_value=[]):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {"latitude": 53.2, "longitude": -6.1, "radius": 500},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "search_stops"
+    assert result["errors"] == {"base": "no_stops_found"}
 
 
 async def test_options_flow_filters_round_trip(
