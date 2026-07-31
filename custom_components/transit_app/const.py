@@ -6,8 +6,11 @@ CONF_API_KEY = "api_key"
 CONF_STOPS = "stops"
 CONF_GLOBAL_STOP_ID = "global_stop_id"
 CONF_STOP_NAME = "stop_name"
-CONF_ROUTE_TYPE_FILTER = "route_type_filter"
 CONF_RADIUS = "radius"
+# Ephemeral, form-only field (not persisted to the config entry): narrows a
+# nearby_stops search's results client-side by stop name/code/route before
+# they're offered as choices. Re-entered on every search.
+CONF_SEARCH_FILTER = "search_filter"
 CONF_PRESENCE_ENTITIES = "presence_entities"
 CONF_QUIET_HOURS_START = "quiet_hours_start"
 CONF_QUIET_HOURS_END = "quiet_hours_end"
@@ -40,3 +43,6 @@ ATTR_GLOBAL_STOP_ID = "global_stop_id"
 ATTR_STOP_NAME = "stop_name"
 
 MAX_UPCOMING_DEPARTURES = 5
+
+SERVICE_REFRESH = "refresh"
+ATTR_CONFIG_ENTRY_ID = "config_entry_id"

@@ -8,12 +8,16 @@
           "api_key": "API key",
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "radius": "Search radius (metres)"
+          "radius": "Search radius (metres)",
+          "search_filter": "Filter (optional)"
+        },
+        "data_description": {
+          "search_filter": "Only show stops whose name, code, or a route number/name contains this text - handy when a large radius turns up a lot of stops."
         }
       },
       "stops": {
         "title": "Choose stops to track",
-        "description": "Select the stops you want next-departure sensors for.",
+        "description": "Select the stops you want next-departure sensors for. The same physical stop can appear more than once if it's served by more than one transit agency feed - each [bracketed] tag is a different feed, both are valid to pick.",
         "data": {
           "stops": "Stops"
         }
@@ -33,6 +37,7 @@
       "invalid_auth": "The API key was rejected by Transit App.",
       "cannot_connect": "Could not reach the Transit App API.",
       "no_stops_found": "No stops were found near that location. Try a larger radius.",
+      "no_stops_match_filter": "No stops nearby matched that filter. Try broadening or clearing it.",
       "no_stops_selected": "Select at least one stop."
     },
     "abort": {
@@ -54,12 +59,16 @@
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "radius": "Search radius (metres)"
+          "radius": "Search radius (metres)",
+          "search_filter": "Filter (optional)"
+        },
+        "data_description": {
+          "search_filter": "Only show stops whose name, code, or a route number/name contains this text - handy when a large radius turns up a lot of stops."
         }
       },
       "stops": {
         "title": "Choose stops to track",
-        "description": "Select the stops you want next-departure sensors for.",
+        "description": "Select the stops you want next-departure sensors for. The same physical stop can appear more than once if it's served by more than one transit agency feed - each [bracketed] tag is a different feed, both are valid to pick.",
         "data": {
           "stops": "Stops"
         }
@@ -79,7 +88,20 @@
       "invalid_auth": "The API key was rejected by Transit App.",
       "cannot_connect": "Could not reach the Transit App API.",
       "no_stops_found": "No stops were found near that location. Try a larger radius.",
+      "no_stops_match_filter": "No stops nearby matched that filter. Try broadening or clearing it.",
       "no_stops_selected": "Select at least one stop."
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh departures now",
+      "description": "Immediately polls Transit App for the freshest departures, bypassing any configured quiet hours/days and presence filter. Useful for on-demand debugging without waiting for the next scheduled poll or changing your quota-saving settings.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Transit App integration",
+          "description": "Which Transit App config entry to refresh. Refreshes all of them if omitted."
+        }
+      }
     }
   }
 }

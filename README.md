@@ -40,8 +40,13 @@ directory and restart Home Assistant.
 
 1. Get an API key from [Transit App](https://transitapp.com/apis).
 2. In Home Assistant: **Settings -> Devices & Services -> Add Integration -> Transit App**.
-3. Enter your API key and confirm (or override) the search location and radius.
-4. Select the stops you want to track from the list of nearby stops.
+3. Enter your API key and confirm (or override) the search location and radius. A wide radius in a
+   dense area can turn up a lot of stops - optionally narrow the list with the filter field, which
+   matches against stop name, stop code, or route number/name.
+4. Select the stops you want to track from the list of nearby stops. The same physical stop can be
+   listed more than once if multiple transit agency feeds serve it - each `[bracketed]` tag is a
+   different feed's `global_stop_id`, and both are legitimate, independently selectable options
+   (not duplicates).
 5. Optionally set up the API-call-saving filters described below (skippable - all off by default).
 
 Sensors are created automatically for every route and direction Transit App reports departures

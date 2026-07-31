@@ -226,3 +226,75 @@ async def test_no_presence_entities_configured_always_polls(
     await coordinator._async_update_data()
 
     coordinator.client.async_get_stop_departures.assert_awaited_once()
+
+
+async def test_refresh_now_bypasses_presence_filter(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """async_refresh_now() polls even when the presence filter would skip it."""
+    hass.states.async_set("person.someone", "not_home")
+    hass.config_entries.async_update_entry(
+        config_entry, options={CONF_PRESENCE_ENTITIES: ["person.someone"]}
+    )
+    coordinator = TransitAppDataUpdateCoordinator(hass, config_entry)
+    coordinator.client.async_get_stop_departures = AsyncMock(return_value=[])
+
+    await coordinator.async_refresh_now()
+    await hass.async_block_till_done()
+
+    coordinator.client.async_get_stop_departures.assert_awaited_once()
+
+
+async def test_refresh_now_bypasses_quiet_hours(
+    hass: HomeAssistant, config_entry, freezer
+) -> None:
+    """async_refresh_now() polls even during configured quiet hours."""
+    await hass.config.async_set_time_zone("UTC")
+    freezer.move_to(datetime(2026, 8, 3, 2, 0, 0))  # inside an overnight window
+    hass.config_entries.async_update_entry(
+        config_entry,
+        options={
+            CONF_QUIET_HOURS_START: "23:00:00",
+            CONF_QUIET_HOURS_END: "06:00:00",
+        },
+    )
+    coordinator = TransitAppDataUpdateCoordinator(hass, config_entry)
+    coordinator.client.async_get_stop_departures = AsyncMock(return_value=[])
+
+    await coordinator.async_refresh_now()
+    await hass.async_block_till_done()
+
+    coordinator.client.async_get_stop_departures.assert_awaited_once()
+
+
+async def test_refresh_now_bypass_does_not_persist_to_next_poll(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """The bypass only applies to the single forced poll, not future ones."""
+    hass.states.async_set("person.someone", "not_home")
+    hass.config_entries.async_update_entry(
+        config_entry, options={CONF_PRESENCE_ENTITIES: ["person.someone"]}
+    )
+    coordinator = TransitAppDataUpdateCoordinator(hass, config_entry)
+    coordinator.client.async_get_stop_departures = AsyncMock(return_value=[])
+
+    await coordinator.async_refresh_now()
+    await hass.async_block_till_done()
+    coordinator.client.async_get_stop_departures.assert_awaited_once()
+
+    await coordinator._async_update_data()
+    coordinator.client.async_get_stop_departures.assert_awaited_once()  # still 1, not 2
+
+
+async def test_unmatched_stop_id_is_ignored_not_dropped_silently(
+    hass: HomeAssistant, config_entry
+) -> None:
+    """A route for a global_stop_id we didn't ask about doesn't blow up the poll."""
+    coordinator = TransitAppDataUpdateCoordinator(hass, config_entry)
+    coordinator.client.async_get_stop_departures = AsyncMock(
+        return_value=[{"global_stop_id": "SOMETHING:UNEXPECTED", "itineraries": []}]
+    )
+
+    data = await coordinator._async_update_data()
+
+    assert data == {"DUBIE:72440": []}

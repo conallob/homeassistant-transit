@@ -20,6 +20,7 @@ from .const import (
     CONF_QUIET_HOURS_END,
     CONF_QUIET_HOURS_START,
     CONF_RADIUS,
+    CONF_SEARCH_FILTER,
     CONF_STOP_NAME,
     CONF_STOPS,
     DEFAULT_RADIUS,
@@ -41,12 +42,22 @@ _WEEKDAY_LABELS = {
 
 
 def _stop_label(stop: dict[str, Any]) -> str:
-    name = stop.get("stop_name", stop.get("global_stop_id"))
+    global_stop_id = str(stop.get("global_stop_id", ""))
+    # A single physical stop can have multiple global_stop_ids - one per
+    # transit agency feed that serves it (see rest/transit_app_next_bus.yaml
+    # in conallob/Home-Assistant-Config for a real example). Without the
+    # agency prefix shown here, two such entries render as visually
+    # identical rows and look like accidental duplicates rather than
+    # distinct, both-legitimate choices.
+    agency = global_stop_id.split(":", 1)[0] if ":" in global_stop_id else None
+    name = stop.get("stop_name", global_stop_id)
     code = stop.get("stop_code")
     routes = stop.get("route_short_names") or stop.get("routes")
     parts = [name]
     if code:
         parts.append(f"#{code}")
+    if agency:
+        parts.append(f"[{agency}]")
     if isinstance(routes, list) and routes:
         route_names = ", ".join(str(r) for r in routes[:6])
         parts.append(f"({route_names})")
@@ -54,6 +65,18 @@ def _stop_label(stop: dict[str, Any]) -> str:
     if distance is not None:
         parts.append(f"- {int(distance)}m")
     return " ".join(str(p) for p in parts)
+
+
+def _stop_matches_filter(stop: dict[str, Any], search_filter: str) -> bool:
+    """Whether a stop's name/code/routes contain the given filter text."""
+    needle = search_filter.strip().lower()
+    if not needle:
+        return True
+    haystacks = [str(stop.get("stop_name", "")), str(stop.get("stop_code", ""))]
+    routes = stop.get("route_short_names") or stop.get("routes")
+    if isinstance(routes, list):
+        haystacks.extend(str(route) for route in routes)
+    return any(needle in haystack.lower() for haystack in haystacks)
 
 
 def _time_field(key: str, current: dict[str, Any]) -> vol.Marker:
@@ -119,13 +142,45 @@ class TransitAppFlowMixin:
     _stop_choices: dict[str, str]
 
     async def _async_search_nearby_stops(
-        self, api_key: str, latitude: float, longitude: float, radius: int
-    ) -> dict[str, str]:
+        self,
+        api_key: str,
+        latitude: float,
+        longitude: float,
+        radius: int,
+        search_filter: str = "",
+    ) -> tuple[dict[str, str], bool]:
+        """Search nearby_stops, optionally narrowing results client-side.
+
+        Returns the (stop_id -> label) choices, and whether a search_filter
+        was given but excluded every stop nearby_stops actually returned -
+        the two "found nothing" cases warrant different error messages.
+        """
         session = async_get_clientsession(self.hass)  # type: ignore[attr-defined]
         client = TransitAppClient(session, api_key)
         stops = await client.async_get_nearby_stops(latitude, longitude, radius)
-        self._stops_by_id = {stop["global_stop_id"]: stop for stop in stops if stop.get("global_stop_id")}
-        return {stop_id: _stop_label(stop) for stop_id, stop in self._stops_by_id.items()}
+        had_stops_before_filter = bool(stops)
+
+        if search_filter:
+            stops = [stop for stop in stops if _stop_matches_filter(stop, search_filter)]
+
+        # Sort so stops sharing a name (e.g. the same physical stop served
+        # by multiple agency feeds - see _stop_label) sit next to each
+        # other, making that relationship obvious instead of scattered.
+        stops = sorted(
+            stops,
+            key=lambda stop: (
+                str(stop.get("stop_name", "")),
+                str(stop.get("stop_code", "")),
+                stop.get("distance") or 0,
+            ),
+        )
+
+        self._stops_by_id = {
+            stop["global_stop_id"]: stop for stop in stops if stop.get("global_stop_id")
+        }
+        choices = {stop_id: _stop_label(stop) for stop_id, stop in self._stops_by_id.items()}
+        filter_excluded_everything = bool(search_filter) and had_stops_before_filter and not choices
+        return choices, filter_excluded_everything
 
     def _merge_previously_tracked_stops(self, existing_stops: list[dict[str, Any]]) -> None:
         """Keep already-tracked stops selectable even if a new search doesn't find them.
@@ -169,8 +224,12 @@ class TransitAppConfigFlow(ConfigFlow, TransitAppFlowMixin, domain=DOMAIN):
             self._longitude = user_input["longitude"]
             self._radius = user_input[CONF_RADIUS]
             try:
-                self._stop_choices = await self._async_search_nearby_stops(
-                    self._api_key, self._latitude, self._longitude, self._radius
+                self._stop_choices, filter_excluded_everything = await self._async_search_nearby_stops(
+                    self._api_key,
+                    self._latitude,
+                    self._longitude,
+                    self._radius,
+                    user_input.get(CONF_SEARCH_FILTER, ""),
                 )
             except TransitAppAuthError:
                 errors["base"] = "invalid_auth"
@@ -178,7 +237,9 @@ class TransitAppConfigFlow(ConfigFlow, TransitAppFlowMixin, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             else:
                 if not self._stop_choices:
-                    errors["base"] = "no_stops_found"
+                    errors["base"] = (
+                        "no_stops_match_filter" if filter_excluded_everything else "no_stops_found"
+                    )
                 else:
                     return await self.async_step_stops()
 
@@ -192,6 +253,7 @@ class TransitAppConfigFlow(ConfigFlow, TransitAppFlowMixin, domain=DOMAIN):
                     "longitude", default=self.hass.config.longitude
                 ): vol.Coerce(float),
                 vol.Required(CONF_RADIUS, default=DEFAULT_RADIUS): vol.Coerce(int),
+                vol.Optional(CONF_SEARCH_FILTER, default=""): str,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -276,11 +338,12 @@ class TransitAppOptionsFlow(OptionsFlow, TransitAppFlowMixin):
         if user_input is not None:
             self._radius = user_input[CONF_RADIUS]
             try:
-                self._stop_choices = await self._async_search_nearby_stops(
+                self._stop_choices, filter_excluded_everything = await self._async_search_nearby_stops(
                     self.config_entry.data[CONF_API_KEY],
                     user_input["latitude"],
                     user_input["longitude"],
                     self._radius,
+                    user_input.get(CONF_SEARCH_FILTER, ""),
                 )
             except TransitAppAuthError:
                 errors["base"] = "invalid_auth"
@@ -291,7 +354,12 @@ class TransitAppOptionsFlow(OptionsFlow, TransitAppFlowMixin):
                     CONF_STOPS, self.config_entry.data.get(CONF_STOPS, [])
                 )
                 self._merge_previously_tracked_stops(existing_stops)
-                return await self.async_step_stops()
+                if not self._stop_choices:
+                    errors["base"] = (
+                        "no_stops_match_filter" if filter_excluded_everything else "no_stops_found"
+                    )
+                else:
+                    return await self.async_step_stops()
 
         schema = vol.Schema(
             {
@@ -302,6 +370,7 @@ class TransitAppOptionsFlow(OptionsFlow, TransitAppFlowMixin):
                     "longitude", default=self.hass.config.longitude
                 ): vol.Coerce(float),
                 vol.Required(CONF_RADIUS, default=DEFAULT_RADIUS): vol.Coerce(int),
+                vol.Optional(CONF_SEARCH_FILTER, default=""): str,
             }
         )
         return self.async_show_form(

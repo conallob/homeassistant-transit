@@ -6,13 +6,16 @@ from unittest.mock import patch
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.transit_app.api import TransitAppApiError, TransitAppAuthError
+from custom_components.transit_app.config_flow import _stop_label, _stop_matches_filter
 from custom_components.transit_app.const import (
     CONF_API_KEY,
     CONF_GLOBAL_STOP_ID,
     CONF_PRESENCE_ENTITIES,
     CONF_QUIET_DAYS,
+    CONF_SEARCH_FILTER,
     CONF_STOP_NAME,
     CONF_STOPS,
     DOMAIN,
@@ -192,6 +195,126 @@ async def test_options_flow_search_preserves_previously_tracked_stop(
         "DUBIE:72440",
         "DUBIE:72429",
     }
+
+
+def test_stop_label_disambiguates_same_physical_stop_across_feeds() -> None:
+    """Two feeds for one physical stop must not render as identical labels.
+
+    e.g. DUBIE:72440 and EIREANNIE:9486 both being "Killarney Road" #4180 -
+    a real, documented Transit App scenario (see
+    rest/transit_app_next_bus.yaml in conallob/Home-Assistant-Config).
+    """
+    dubie = {
+        "global_stop_id": "DUBIE:72440",
+        "stop_name": "Killarney Road",
+        "stop_code": "4180",
+        "route_short_names": ["E1", "L12"],
+        "distance": 120,
+    }
+    eireann = {
+        "global_stop_id": "EIREANNIE:9486",
+        "stop_name": "Killarney Road",
+        "stop_code": "4180",
+        "route_short_names": ["E1"],
+        "distance": 120,
+    }
+    assert _stop_label(dubie) != _stop_label(eireann)
+    assert "[DUBIE]" in _stop_label(dubie)
+    assert "[EIREANNIE]" in _stop_label(eireann)
+
+
+def test_stop_matches_filter_checks_name_code_and_routes() -> None:
+    """The filter matches on stop name, stop code, or any route name/number."""
+    stop = {
+        "stop_name": "Killarney Road",
+        "stop_code": "4180",
+        "route_short_names": ["E1", "L12"],
+    }
+    assert _stop_matches_filter(stop, "")
+    assert _stop_matches_filter(stop, "killarney")
+    assert _stop_matches_filter(stop, "4180")
+    assert _stop_matches_filter(stop, "l12")
+    assert not _stop_matches_filter(stop, "45a")
+
+
+async def test_search_filter_narrows_results(
+    hass: HomeAssistant, nearby_stops_response
+) -> None:
+    """A search_filter excludes stops that don't match it."""
+    result = await _start_user_flow(hass)
+
+    with patch(_PATCH_NEARBY_STOPS, return_value=nearby_stops_response):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_API_KEY: "test-key",
+                "latitude": 53.2,
+                "longitude": -6.1,
+                "radius": 500,
+                CONF_SEARCH_FILTER: "Fairyhill",
+            },
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "stops"
+    stops_selector_config = result["data_schema"].schema[CONF_STOPS].config
+    offered_ids = {opt["value"] for opt in stops_selector_config["options"]}
+    assert offered_ids == {"DUBIE:72429"}  # Fairyhill only, not Killarney Road
+
+
+async def test_search_filter_matching_nothing_shows_specific_error(
+    hass: HomeAssistant, nearby_stops_response
+) -> None:
+    """A filter that excludes every nearby stop gets its own error message."""
+    result = await _start_user_flow(hass)
+
+    with patch(_PATCH_NEARBY_STOPS, return_value=nearby_stops_response):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_API_KEY: "test-key",
+                "latitude": 53.2,
+                "longitude": -6.1,
+                "radius": 500,
+                CONF_SEARCH_FILTER: "no-such-route-or-stop",
+            },
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"base": "no_stops_match_filter"}
+
+
+async def test_options_flow_search_no_stops_found_shows_error(hass: HomeAssistant) -> None:
+    """An empty search result with nothing previously tracked shows an error.
+
+    Uses a fresh entry with no tracked stops - unlike the `config_entry`
+    fixture, there's nothing for _merge_previously_tracked_stops to fall
+    back to, so an empty nearby_stops response really does leave the
+    choices empty.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Transit App",
+        data={CONF_API_KEY: "test-api-key", CONF_STOPS: []},
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "search_stops"}
+    )
+
+    with patch(_PATCH_NEARBY_STOPS, return_value=[]):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {"latitude": 53.2, "longitude": -6.1, "radius": 500},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "search_stops"
+    assert result["errors"] == {"base": "no_stops_found"}
 
 
 async def test_options_flow_filters_round_trip(
