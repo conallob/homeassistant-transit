@@ -1,11 +1,13 @@
 {
   "domain": "transit_app",
   "name": "Transit App",
-  "codeowners": ["@conallob"],
+  "codeowners": [
+    "@conallob"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/conallob/homeassistant-transit",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/conallob/homeassistant-transit/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.0.1"
 }
