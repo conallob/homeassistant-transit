@@ -13,11 +13,15 @@ from custom_components.transit_app.config_flow import _stop_label, _stop_matches
 from custom_components.transit_app.const import (
     CONF_API_KEY,
     CONF_GLOBAL_STOP_ID,
+    CONF_MONTHLY_QUOTA,
     CONF_PRESENCE_ENTITIES,
     CONF_QUIET_DAYS,
+    CONF_RATE_LIMIT_PER_MINUTE,
     CONF_SEARCH_FILTER,
     CONF_STOP_NAME,
     CONF_STOPS,
+    DEFAULT_MONTHLY_QUOTA,
+    DEFAULT_RATE_LIMIT_PER_MINUTE,
     DOMAIN,
 )
 
@@ -66,8 +70,14 @@ async def test_full_user_flow_creates_entry(
         "DUBIE:72440",
         "DUBIE:72429",
     }
-    # Optional filters were left blank, so no stray empty keys should linger.
-    assert result["options"] == {CONF_PRESENCE_ENTITIES: [], CONF_QUIET_DAYS: []}
+    # Optional filters were left blank, so no stray empty keys should linger,
+    # but the quota fields always get their plan-default values.
+    assert result["options"] == {
+        CONF_PRESENCE_ENTITIES: [],
+        CONF_QUIET_DAYS: [],
+        CONF_MONTHLY_QUOTA: DEFAULT_MONTHLY_QUOTA,
+        CONF_RATE_LIMIT_PER_MINUTE: DEFAULT_RATE_LIMIT_PER_MINUTE,
+    }
 
 
 async def test_invalid_auth_shows_error(hass: HomeAssistant) -> None:

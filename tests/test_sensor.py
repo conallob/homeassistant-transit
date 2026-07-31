@@ -63,7 +63,7 @@ async def test_no_departures_yields_no_sensors(
 
 
 async def test_new_route_discovered_on_later_refresh_adds_sensor(
-    hass: HomeAssistant, config_entry, stop_departures_response, client_get_departures
+    hass: HomeAssistant, config_entry, stop_departures_response, client_get_departures, freezer
 ) -> None:
     """A route that only appears on a later poll gets its own sensor added."""
     client_get_departures.return_value = []
@@ -75,6 +75,9 @@ async def test_new_route_discovered_on_later_refresh_adds_sensor(
 
     client_get_departures.return_value = stop_departures_response
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    # Past the default 5 calls/minute rate limit's 12s floor, so this
+    # second real poll isn't itself blocked by the hard rate-limit guard.
+    freezer.tick(15)
     await coordinator.async_refresh()
     await hass.async_block_till_done()
 
@@ -83,7 +86,7 @@ async def test_new_route_discovered_on_later_refresh_adds_sensor(
 
 
 async def test_sensor_becomes_unavailable_when_route_disappears(
-    hass: HomeAssistant, config_entry, stop_departures_response, client_get_departures
+    hass: HomeAssistant, config_entry, stop_departures_response, client_get_departures, freezer
 ) -> None:
     """If a route stops being reported, its sensor goes unavailable (not deleted)."""
     client_get_departures.return_value = stop_departures_response
@@ -96,6 +99,7 @@ async def test_sensor_becomes_unavailable_when_route_disappears(
 
     client_get_departures.return_value = []
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    freezer.tick(15)
     await coordinator.async_refresh()
     await hass.async_block_till_done()
 

@@ -24,12 +24,18 @@
       },
       "filters": {
         "title": "Save API calls (optional)",
-        "description": "These are optional and all off by default. Use them to skip polling Transit App when nobody needs the data, to help stay within your API key's call quota.",
+        "description": "These are optional and all off by default. Use them to skip polling Transit App when nobody needs the data, to help stay within your API key's call quota. Quota saved by quiet hours/days and presence isn't wasted - polling automatically speeds up the rest of the time to spend the rest of the month's quota, instead of just idling unused.",
         "data": {
           "presence_entities": "Only poll while one of these is home",
           "quiet_hours_start": "Quiet hours start",
           "quiet_hours_end": "Quiet hours end",
-          "quiet_days": "Quiet days (no polling at all)"
+          "quiet_days": "Quiet days (no polling at all)",
+          "monthly_quota": "Monthly API call quota",
+          "rate_limit_per_minute": "API rate limit (calls/minute)"
+        },
+        "data_description": {
+          "monthly_quota": "From your Transit App plan - defaults to the free tier's 1500 calls/month.",
+          "rate_limit_per_minute": "From your Transit App plan - defaults to the free tier's 5 calls/minute."
         }
       }
     },
@@ -75,12 +81,18 @@
       },
       "filters": {
         "title": "Save API calls (optional)",
-        "description": "These are optional and all off by default. Use them to skip polling Transit App when nobody needs the data, to help stay within your API key's call quota.",
+        "description": "These are optional and all off by default. Use them to skip polling Transit App when nobody needs the data, to help stay within your API key's call quota. Quota saved by quiet hours/days and presence isn't wasted - polling automatically speeds up the rest of the time to spend the rest of the month's quota, instead of just idling unused.",
         "data": {
           "presence_entities": "Only poll while one of these is home",
           "quiet_hours_start": "Quiet hours start",
           "quiet_hours_end": "Quiet hours end",
-          "quiet_days": "Quiet days (no polling at all)"
+          "quiet_days": "Quiet days (no polling at all)",
+          "monthly_quota": "Monthly API call quota",
+          "rate_limit_per_minute": "API rate limit (calls/minute)"
+        },
+        "data_description": {
+          "monthly_quota": "From your Transit App plan - defaults to the free tier's 1500 calls/month.",
+          "rate_limit_per_minute": "From your Transit App plan - defaults to the free tier's 5 calls/minute."
         }
       }
     },
