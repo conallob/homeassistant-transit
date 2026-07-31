@@ -102,7 +102,7 @@ async def test_refresh_service_unknown_entry_id_raises(
 
 
 async def test_refresh_service_targets_all_entries_when_omitted(
-    hass: HomeAssistant, config_entry
+    hass: HomeAssistant, config_entry, freezer
 ) -> None:
     """Calling the action with no target refreshes every loaded entry."""
     other_entry = MockConfigEntry(
@@ -131,13 +131,16 @@ async def test_refresh_service_targets_all_entries_when_omitted(
         assert other_entry.state is ConfigEntryState.LOADED
         mocked_get_departures.reset_mock()
 
+        # Past the default 5 calls/minute rate limit's 12s floor, so this
+        # manual refresh isn't itself blocked by the hard rate-limit guard.
+        freezer.tick(15)
         await hass.services.async_call(DOMAIN, SERVICE_REFRESH, {}, blocking=True)
 
     assert mocked_get_departures.await_count == 2
 
 
 async def test_refresh_service_targets_specific_entry(
-    hass: HomeAssistant, config_entry
+    hass: HomeAssistant, config_entry, freezer
 ) -> None:
     """Calling the action with config_entry_id only refreshes that entry."""
     other_entry = MockConfigEntry(
@@ -164,6 +167,7 @@ async def test_refresh_service_targets_specific_entry(
         assert other_entry.state is ConfigEntryState.LOADED
         mocked_get_departures.reset_mock()
 
+        freezer.tick(15)
         await hass.services.async_call(
             DOMAIN,
             SERVICE_REFRESH,

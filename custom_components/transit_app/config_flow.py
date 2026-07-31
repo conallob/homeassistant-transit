@@ -15,15 +15,19 @@ from .api import TransitAppApiError, TransitAppAuthError, TransitAppClient
 from .const import (
     CONF_API_KEY,
     CONF_GLOBAL_STOP_ID,
+    CONF_MONTHLY_QUOTA,
     CONF_PRESENCE_ENTITIES,
     CONF_QUIET_DAYS,
     CONF_QUIET_HOURS_END,
     CONF_QUIET_HOURS_START,
     CONF_RADIUS,
+    CONF_RATE_LIMIT_PER_MINUTE,
     CONF_SEARCH_FILTER,
     CONF_STOP_NAME,
     CONF_STOPS,
+    DEFAULT_MONTHLY_QUOTA,
     DEFAULT_RADIUS,
+    DEFAULT_RATE_LIMIT_PER_MINUTE,
     DOMAIN,
     WEEKDAYS,
 )
@@ -121,6 +125,14 @@ def _filters_schema(current: dict[str, Any]) -> vol.Schema:
                     }
                 }
             ),
+            vol.Optional(
+                CONF_MONTHLY_QUOTA,
+                default=current.get(CONF_MONTHLY_QUOTA, DEFAULT_MONTHLY_QUOTA),
+            ): vol.All(selector.selector({"number": {"min": 1, "mode": "box"}}), vol.Coerce(int)),
+            vol.Optional(
+                CONF_RATE_LIMIT_PER_MINUTE,
+                default=current.get(CONF_RATE_LIMIT_PER_MINUTE, DEFAULT_RATE_LIMIT_PER_MINUTE),
+            ): vol.All(selector.selector({"number": {"min": 1, "mode": "box"}}), vol.Coerce(int)),
         }
     )
 

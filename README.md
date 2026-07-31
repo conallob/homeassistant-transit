@@ -79,6 +79,15 @@ only runs certain times of day). Use the integration's **Configure** option any 
 
   When a poll is skipped for any of these reasons, sensors simply keep their last known data
   rather than making a request.
+- **Monthly API call quota and rate limit** - defaults to Transit App's free tier (1500 calls/month,
+  5 calls/minute); change these if your plan differs. Quota saved by quiet hours/days and presence
+  isn't just left unused: polling **adapts its own interval** to spend the rest of the current
+  billing month's quota over the rest of its *active* time (excluding configured quiet days/hours -
+  presence isn't predictable in advance, so it isn't factored into the plan, but an unpredicted
+  absence still shows up as extra leftover quota that speeds up polling afterwards). Two hard
+  limits from Transit App itself are always respected regardless of any of the above: the
+  calls/minute rate limit, and the monthly quota itself (polling pauses once it's exhausted until
+  the period rolls over) - even a manual `transit_app.refresh` won't cross either of these.
 
 ## Development background
 

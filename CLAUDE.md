@@ -83,11 +83,29 @@ certain times of day).
     with blank quiet hours; caught by `test_config_flow.py`.)
 - **`coordinator.py`** - `TransitAppDataUpdateCoordinator` polls `stop_departures` for every
   tracked `global_stop_id`, batched into as few requests as possible
-  (`MAX_GLOBAL_STOP_IDS_PER_REQUEST` chunks). Before polling, `_skip_reason()` checks three
-  independent, optional, quota-saving gates (all off by default): quiet days, quiet hours
-  (handles overnight wrap, e.g. 23:00-06:00), and a presence filter (skip unless a configured
-  `person`/`device_tracker` entity is `home`). When skipped, it returns the previous `self.data`
-  unchanged rather than hitting the network.
+  (`MAX_GLOBAL_STOP_IDS_PER_REQUEST` chunks). Two tiers of gating before a poll:
+  - **Soft, user-configured gates** (`_skip_reason()`, all off by default, bypassable by a forced
+    refresh): quiet days, quiet hours (handles overnight wrap, e.g. 23:00-06:00), and a presence
+    filter (skip unless a configured `person`/`device_tracker` entity is `home`).
+  - **Hard limits from Transit App itself** (`_async_update_data()`, never bypassable, checked
+    before the soft gates): a calls/minute rate limit (`min_seconds_between_calls`, tracked via
+    `_last_call_at`) and the monthly call quota (`_calls_remaining()`, tracked via a
+    `homeassistant.helpers.storage.Store`-backed counter keyed by `"YYYY-MM"` so it survives
+    restarts - see `_async_load_quota_state`/`_async_register_calls`).
+
+  Whenever a poll is skipped (either tier), it returns the previous `self.data` unchanged rather
+  than hitting the network.
+
+  `update_interval` is **adaptive**, not fixed: after a successful poll, `_compute_adaptive_interval()`
+  spends the *rest* of the monthly quota over the *rest* of the estimated-active time in the
+  billing month (`_active_fraction()` - excludes configured quiet days/hours, but deliberately
+  *not* presence, since future absence can't be predicted; an unpredicted skip just leaves that
+  call unspent, which shows up as extra remaining quota next poll and speeds up the interval to
+  compensate). Clamped between `MIN_ADAPTIVE_INTERVAL` (the old fixed default) and
+  `MAX_ADAPTIVE_INTERVAL`. After a *soft* skip, `update_interval` is deliberately reset back down to
+  `DEFAULT_SCAN_INTERVAL` (not left at whatever long interval an earlier active period computed) so
+  a condition becoming active again - quiet hours ending, someone arriving home - is noticed
+  promptly rather than after a stretched-out interval.
 - **`sensor.py`** - `async_setup_entry` keeps a `known_keys` set of `(stop_id, route_key,
   direction)` tuples and calls `async_add_entities` only for newly-discovered combinations,
   re-checking on every coordinator update via `coordinator.async_add_listener`. Each
